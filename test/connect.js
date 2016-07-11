@@ -9,7 +9,7 @@ import Vuex from 'vuex';
 Vue.use(Vuex);
 
 describe('connect', () => {
-  let state, mutations, store, options, Component;
+  let state, mutations, actions, getters, store, options, Component;
 
   beforeEach(() => {
     setup();
@@ -25,7 +25,18 @@ describe('connect', () => {
       UPDATE_BAR(state, value) { state.bar = value; }
     };
 
-    store = new Vuex.Store({ state, mutations });
+    actions = {
+      foo: ({ commit }, value) => commit('UPDATE_FOO', value),
+      bar: ({ commit }, value) => commit('UPDATE_BAR', value)
+    };
+
+    getters = {
+      foo: state => state.foo,
+      bar: state => state.bar,
+      baz: state => state.baz
+    };
+
+    store = new Vuex.Store({ state, mutations, actions, getters });
 
     options = {
       props: ['a', 'b', 'c'],
@@ -57,8 +68,8 @@ describe('connect', () => {
 
   it('binds getter functions', () => {
     const Container = connect({
-      a: (state) => state.foo,
-      b: (state) => state.bar
+      a: 'foo',
+      b: 'bar'
     })('example', Component);
 
     const actual = mountContainer(store, Container);
@@ -69,7 +80,7 @@ describe('connect', () => {
 
   it('binds actions', () => {
     const Container = connect(null, {
-      c: ({ dispatch }, value) => dispatch('UPDATE_FOO', value)
+      c: 'foo'
     })('example', Component);
 
     const actual = mountContainer(store, Container);
@@ -81,17 +92,15 @@ describe('connect', () => {
 
   it('binds getter values to component props', (done) => {
     const Container = connect({
-      a: (state) => state.foo,
-      b: (state) => state.bar + 3,
-      z: (state) => state.baz
+      a: 'foo',
+      b: 'bar'
     })('example', Component);
 
     const container = mountContainer(store, Container);
     const actual = container.$children[0];
 
     assert(actual.a === 'bar');
-    assert(actual.b === 8);
-    assert(actual.z === void 0); // z is not registered on props
+    assert(actual.b === 5);
 
     store.state.foo = 'baz';
 
@@ -104,7 +113,7 @@ describe('connect', () => {
 
   it('binds actions to component props', () => {
     const Container = connect(null, {
-      c: ({ dispatch }, value) => dispatch('UPDATE_BAR', value * 2)
+      c: 'bar'
     })('example', Component);
 
     const container = mountContainer(store, Container);
@@ -112,7 +121,7 @@ describe('connect', () => {
 
     assert(store.state.bar === 5);
     actual.c(10);
-    assert(store.state.bar === 20);
+    assert(store.state.bar === 10);
   });
 
   it('injects lifecycle hooks', (done) => {
@@ -149,13 +158,10 @@ describe('connect', () => {
   });
 
   it('does not allow other than lifecycle hooks', () => {
-    const a = s => s.foo;
-    const b = s => s.state.bar;
-
     const C = connect({
-      a: a
+      a: 'foo'
     }, {
-      b: b
+      b: 'bar'
     }, {
       a: 1,
       b: 1,
@@ -176,8 +182,8 @@ describe('connect', () => {
 
     const c = mountContainer(store, C);
 
-    assert(c.a === a(store.state));
-    assert(c.b() === b(store));
+    assert(c.a === store.getters.foo);
+    assert(typeof c.b === 'function');
     assert(c.c === void 0);
     assert(c.d === void 0);
     assert(c.e === void 0);
@@ -186,8 +192,8 @@ describe('connect', () => {
 
   it('passes container props to component props if no getters and actions are specified', () => {
     const C = connect({
-      a: state => state.foo,
-      b: state => state.bar
+      a: 'foo',
+      b: 'bar'
     })('example', Component);
 
     const c = mountContainer(store, C, { a: 1, c: 'test' });
@@ -199,9 +205,9 @@ describe('connect', () => {
 
   it('accepts component options for wrapped component', () => {
     const C = connect({
-      a: state => state.foo
+      a: 'foo'
     }, {
-      c: ({ dispatch }, value) => dispatch('UPDATE_FOO', value)
+      c: 'foo'
     })('example', options);
 
     const c = mountContainer(store, C);

@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import { mapGetters, mapActions } from 'vuex';
 import { camelToKebab, assign, pick, omit, mapValues } from './utils';
 
 const VERSION = Number(Vue.version.split('.')[0]);
@@ -38,10 +39,8 @@ export function connect(getters, actions, lifecycle) {
       components: {
         [name]: Component
       },
-      vuex: {
-        getters,
-        actions
-      }
+      computed: mapGetters(getters),
+      methods: mapActions(actions)
     };
 
     insertRenderer(options, name, propKeys.concat(Object.keys(containerProps)));
